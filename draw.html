@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet Draw</title>
+
+    <style>
+        html, body, #map {
+            height: 100vh;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #removeBtn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background-color: #fff;
+            padding: 5px 10px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="removeBtn">Remove Features</div>
+
+    <!-- leaflet js  -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.2/dist/leaflet.js"></script>
+
+    <!-- leaflet draw plugin  -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.js"></script>
+
+    <script>
+        var map = L.map('map').setView([30.3753, 69.3451], 6);
+        var drawnFeatures = new L.FeatureGroup().addTo(map);
+
+        // Add the OpenStreetMap tiles
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        })
+        osm.addTo(map);
+
+        var drawControl = new L.Control.Draw({
+            edit: {
+                featureGroup: drawnFeatures,
+                remove: false
+            },
+            draw: {
+                polygon: {
+                    shapeOptions: {
+                        color: 'purple'
+                    },
+                },
+                polyline: {
+                    shapeOptions: {
+                        color: 'red'
+                    },
+                },
+                rect: {
+                    shapeOptions: {
+                        color: 'green'
+                    },
+                },
+                circle: {
+                    shapeOptions: {
+                        color: 'steelblue'
+                    },
+                },
+            },
+        });
+        map.addControl(drawControl);
+
+        map.on("draw:created", function(e) {
+            var layer = e.layer;
+            layer.bindPopup(`<p>${JSON.stringify(layer.toGeoJSON())}</p>`)
+            drawnFeatures.addLayer(layer);
+
+            // Store drawn feature in localStorage
+            storeFeature(layer.toGeoJSON());
+        });
+
+        document.getElementById('removeBtn').addEventListener('click', function() {
+            // Remove features from the map and localStorage
+            drawnFeatures.clearLayers();
+            localStorage.removeItem('drawnFeatures');
+        });
+
+        map.on("draw:edited", function(e) {
+            var layers = e.layers;
+            layers.eachLayer(function(layer) {
+                // Handle edited features if needed
+            })
+        });
+
+        // Function to store feature in localStorage
+        function storeFeature(feature) {
+            var storedFeatures = JSON.parse(localStorage.getItem('drawnFeatures')) || [];
+            storedFeatures.push(feature);
+            localStorage.setItem('drawnFeatures', JSON.stringify(storedFeatures));
+        }
+
+        // Function to load features from localStorage
+        function loadFeatures() {
+            var storedFeatures = JSON.parse(localStorage.getItem('drawnFeatures')) || [];
+            storedFeatures.forEach(function(feature) {
+                var layer = L.geoJSON(feature);
+                layer.bindPopup(`<p>${JSON.stringify(feature)}</p>`)
+                drawnFeatures.addLayer(layer);
+            });
+        }
+
+        // Load features when the page loads
+        loadFeatures();
+    </script>
+</body>
+</html>
